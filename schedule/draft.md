@@ -1,5 +1,10 @@
 # Draft for schedule
 <font size=3>
+
+## Get familiar with the dataset
+
+about 1 week on this
+
 - file I/O
 
 - do a sort according to the plane, and then to trigger time. (how to access the time axis?)
@@ -12,7 +17,7 @@
 
 ![img](pic/algorithm.png)
 
-about 1 month on this ( finished in Apr. )
+about 1 month on this ( finished in mid Apr. )
 
     1. LV center and ROI Localization
     2. LV Segmentation
@@ -32,4 +37,4 @@ about 1 month on this ( finished in Apr. )
 
 - Presentation | one week
 
-everything will be finished before june
+everything will be finished in mid May
