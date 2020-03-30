@@ -6,8 +6,8 @@ import nibabel as nib
 from nibabel.testing import data_path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import matplotlib.pyplot as plt
-from utils import init_ROI, region_growing
-from scipy.spatial import ConvexHull
+from utils import init_ROI, region_growing, get_convex_hull_centroid
+
 
 
 dataset_path = '../dataset/training/'
@@ -38,33 +38,9 @@ plt.show()
 plt.imshow(scan_map)
 plt.show()
 
+cx, cy = get_convex_hull_centroid(scan_map)
 
-r, c = np.where(scan_map == np.max(scan_map))
-points = np.row_stack((r, c)).T
-hull = ConvexHull(points)
-
-#Get centoid
-cx = np.mean(hull.points[hull.vertices,0])
-cy = np.mean(hull.points[hull.vertices,1])
-cx = np.floor(cx + 0.5)
-cy = np.floor(cy + 0.5)
 print(cx, cy)
 
-def get_convex_hull_centroid(scan_map):
-    """
-
-    :param scan_map: 2d array for ROI
-    :return: pixel coordinate of the convex centroid
-    """
-    r, c = np.where(scan_map == np.max(scan_map))
-    points = np.row_stack((r, c)).T
-    hull = ConvexHull(points)
-
-    # Get centoid
-    cx = np.mean(hull.points[hull.vertices, 0])
-    cy = np.mean(hull.points[hull.vertices, 1])
-    cx = np.floor(cx + 0.5)
-    cy = np.floor(cy + 0.5)
-    return [cx, cy]
 
 

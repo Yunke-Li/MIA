@@ -1,7 +1,7 @@
 from skimage.filters import threshold_multiotsu
 from skimage.measure import label
 import numpy as np
-
+from scipy.spatial import ConvexHull
 
 def init_ROI(img, cwidth=50):
     '''
@@ -93,7 +93,22 @@ def region_growing(img, init_center, center_tl, threshold=25):
         scan_cnt = np.count_nonzero(scan_map == 1)
     return scan_map
 
+def get_convex_hull_centroid(scan_map):
+    """
 
+    :param scan_map: 2d array for ROI
+    :return: pixel coordinate of the convex centroid
+    """
+    r, c = np.where(scan_map == np.max(scan_map))
+    points = np.row_stack((r, c)).T
+    hull = ConvexHull(points)
+
+    # Get centoid
+    cx = np.mean(hull.points[hull.vertices, 0])
+    cy = np.mean(hull.points[hull.vertices, 1])
+    cx = np.floor(cx + 0.5)
+    cy = np.floor(cy + 0.5)
+    return [cx, cy]
 
 
 
