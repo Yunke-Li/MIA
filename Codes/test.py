@@ -3,14 +3,22 @@ import sys
 import numpy as np
 import nibabel
 import nibabel as nib
+from skimage.filters import threshold_multiotsu  # updated
 from nibabel.testing import data_path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import matplotlib.pyplot as plt
-from utils import init_ROI, region_growing, get_convex_hull_centroid
+from utils import init_ROI, region_growing, get_convex_hull_centroid, get8n, region_growing_2
+import cv2
+from skimage.morphology import convex_hull_image
+from skimage import feature
+import skimage
 
-asdfasdfasdfasfdasdfasddfasddfasdajdfd
 
-dataset_path = '../dataset/training/'
+
+# dataset_path = '../dataset/training/'
+dataset_path = r'D:\ds\training\\'
+
+
 patient_list = os.listdir(dataset_path)
 
 file_path = dataset_path + patient_list[0] + '/'
@@ -33,13 +41,14 @@ init_center, center_tl, threshold = init_ROI(img_data[:, :, 3, 0])
 img = np.digitize(img_data[:,:,3,0], bins=threshold)
 scan_map = region_growing(img, init_center, center_tl, threshold=1)
 
-plt.imshow(img)
-plt.show()
-plt.imshow(scan_map)
-plt.show()
+# plt.imshow(img)
+# plt.show()
+# plt.imshow(scan_map)
+# plt.show()
 
 cx, cy = get_convex_hull_centroid(scan_map)
-
+cx = int(cx)
+cy = int(cy)
 """
 ============================================================================
 Li's code, organized by Deng
@@ -49,7 +58,7 @@ Li's code, organized by Deng
 # put the self-defined function in utils.py
 # ================================
 
-
+i = img_data[:,:,3,0]
 roi = i[cx - 30:cx + 30, cy - 30:cy + 30]
 plt.figure()
 plt.imshow(i, cmap='gray')
@@ -58,7 +67,10 @@ plt.show()
 
 
 # ==========================================================
-T1, T2 = ExOtsu(roi)
+
+thresholds = threshold_multiotsu(roi)   # updated
+T1 = thresholds[0]   # updated
+T2 = thresholds[0]   # updated
 # change to function in skimage
 # from skimage.filters import threshold_multiotsu
 # check official document for detail
@@ -91,7 +103,7 @@ ret, img = cv2.threshold(i, T1, T2, cv2.THRESH_BINARY)  # 阈值要改
 # changed all center_x and center_y to cx cy
 seed = [cx, cy]  # center要改
 #
-region = region_growing(img, seed)
+region = region_growing_2(img, seed)
 plt.figure()
 plt.imshow(region, cmap='gray')
 plt.show()
