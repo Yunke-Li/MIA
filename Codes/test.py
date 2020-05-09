@@ -8,7 +8,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import matplotlib.pyplot as plt
 from utils import init_ROI, region_growing, get_convex_hull_centroid
 
-asdfasdfasdfasfdasdfasddfasddfasd
+asdfasdfasdfasfdasdfasddfasddfasdajdfd
 
 dataset_path = '../dataset/training/'
 patient_list = os.listdir(dataset_path)
