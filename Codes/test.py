@@ -15,8 +15,8 @@ import skimage
 
 
 
-# dataset_path = '../dataset/training/'
-dataset_path = r'D:\ds\training\\'
+dataset_path = '../dataset/training/'
+# dataset_path = r'D:\ds\training\\'
 
 
 patient_list = os.listdir(dataset_path)
@@ -89,7 +89,7 @@ polar_image = cv2.linearPolar(img64_float, (img64_float.shape[0] / 2, img64_floa
 
 
 polar_image = polar_image / 255
-cv2.imshow("polar1", polar_image)
+# plt.imshow(polar_image)
 
 
 # ==========================================================
@@ -126,7 +126,9 @@ convex_hull = convex_hull_image(contour)
 plt.figure()
 plt.imshow(convex_hull, cmap='gray')
 plt.show()
+
 # low-pass filter of FFT (smoothing)
+
 
 
 
