@@ -60,9 +60,9 @@ Li's code, organized by Deng
 
 i = img_data[:, :, 3, 0]
 roi = i[cx - 30:cx + 30, cy - 30:cy + 30]
-plt.figure()
-plt.imshow(i, cmap='gray')
-plt.show()
+# plt.figure()
+# plt.imshow(i, cmap='gray')
+# plt.show()
 
 
 
@@ -89,7 +89,7 @@ polar_image = cv2.linearPolar(img64_float, (img64_float.shape[0] / 2, img64_floa
 
 
 polar_image = polar_image / 255
-cv2.imshow("polar1", polar_image)
+# cv2.imshow("polar1", polar_image)
 
 
 # ==========================================================
@@ -104,9 +104,9 @@ ret, img = cv2.threshold(i, T1, T2, cv2.THRESH_BINARY)  # 阈值要改
 seed = [cx, cy]  # center要改
 #
 region = region_growing_2(img, seed)
-plt.figure()
-plt.imshow(region, cmap='gray')
-plt.show()
+# plt.figure()
+# plt.imshow(region, cmap='gray')
+# plt.show()
 
 edges = feature.canny(polar_image, sigma=11)
 edges64_float = edges.astype(np.float64)
