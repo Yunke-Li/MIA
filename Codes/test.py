@@ -38,7 +38,7 @@ width = 30
 
 # prep
 init_center, center_tl, threshold = init_ROI(img_data[:, :, 3, 0])
-img = np.digitize(img_data[:,:,3,0], bins=threshold)
+img = np.digitize(img_data[:, :, 3, 0], bins=threshold)
 scan_map = region_growing(img, init_center, center_tl, threshold=1)
 
 # plt.imshow(img)
@@ -58,7 +58,7 @@ Li's code, organized by Deng
 # put the self-defined function in utils.py
 # ================================
 
-i = img_data[:,:,3,0]
+i = img_data[:, :, 3, 0]
 roi = i[cx - 30:cx + 30, cy - 30:cy + 30]
 plt.figure()
 plt.imshow(i, cmap='gray')
