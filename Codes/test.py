@@ -5,17 +5,20 @@ import nibabel
 import nibabel as nib
 from skimage.filters import threshold_multiotsu  # updated
 from nibabel.testing import data_path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import matplotlib.pyplot as plt
-from utils import init_ROI, region_growing, get_convex_hull_centroid, get8n, region_growing_2
+plt.interactive(False)
+from utils import *
 import cv2
 from skimage.morphology import convex_hull_image
-from skimage import feature
+from segment import segLV
+# from scipy.spatial import ConvexHull
+# from skimage import feature
 import skimage
 
 
 
-dataset_path = '../dataset/training/'
+dataset_path = '/home/dj/git/MIA/dataset/training/'
 # dataset_path = r'D:\ds\training\\'
 
 
@@ -24,113 +27,57 @@ patient_list = os.listdir(dataset_path)
 file_path = dataset_path + patient_list[0] + '/'
 file_list = os.listdir(file_path)
 for i in file_list:
-    if '4d' in i:
-        file = file_path + i
+    if 'frame01.' in i:
+        fileRaw = file_path + i
+    elif 'frame01_' in i:
+        fileGT = file_path + i
 
-img = nib.load(file)
-img.shape[2]
-img_data = img.get_fdata()
+raw_data = nib.load(fileRaw)
+gt_data = nib.load(fileGT)
+gt = gt_data.get_fdata()
+# img.shape[2]
+info = raw_data.header
+img = raw_data.get_fdata()
 shape = img.shape
-width = 30
-"""
-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-"""
+raw_info = info.structarr
+xspacing = raw_info['pixdim'][1]
+yspacing = raw_info['pixdim'][2]
+xRadius = int(110/xspacing/2)
+yRadius = int(110/yspacing/2)
+width = xRadius
+sliceNum = shape[2]
+diceError = np.zeros(sliceNum)
+diceDiff = np.zeros(sliceNum)
 
-# prep
-init_center, center_tl, threshold = init_ROI(img_data[:, :, 3, 0])
-img = np.digitize(img_data[:,:,3,0], bins=threshold)
-scan_map = region_growing(img, init_center, center_tl, threshold=1)
 
-# plt.imshow(img)
-# plt.show()
-# plt.imshow(scan_map)
-# plt.show()
+for s in range(sliceNum):
+    tempGt = gt[:,:,s]
+    tempRaw = img[:,:,s]
 
-cx, cy = get_convex_hull_centroid(scan_map)
-cx = int(cx)
-cy = int(cy)
-"""
-============================================================================
-Li's code, organized by Deng
-"""
-# ================================
-# required modification:
-# put the self-defined function in utils.py
-# ================================
+    # gt preprocessing
+    tempGt[tempGt!=3] = 0
+    # tempGt[tempGt==2] = 0
+    tempGt[tempGt==3] = 1
+    chull, x, y, sx, sy = segLV(tempRaw, xRadius)
+    diff = (chull - tempGt)
+    # dice = abs(diff)
+    # fig, ax = plt.subplots()
+    # ax.imshow(dice)
+    # ax.set_title('Diff')
+    plt.imshow(diff)
+    l = np.sum(diff)
+    diceError[s]= findDiceError(chull, tempGt)
+    d,_ = np.where(diff !=0)
+    diceDiff[s] = len(d)
+    plt.show()
 
-i = img_data[:,:,3,0]
-roi = i[cx - 30:cx + 30, cy - 30:cy + 30]
-plt.figure()
-plt.imshow(i, cmap='gray')
+
+    continue
+
+
+plt.bar(range(len(diceDiff)), diceDiff)
 plt.show()
-
-
-
-# ==========================================================
-
-thresholds = threshold_multiotsu(roi)   # updated
-T1 = thresholds[0]   # updated
-T2 = thresholds[0]   # updated
-# change to function in skimage
-# from skimage.filters import threshold_multiotsu
-# check official document for detail
-# https://scikit-image.org/
-# ==========================================================
-
-
-# polar transformation
-source = roi
-img64_float = source.astype(np.float64)
-
-Mvalue = 30  # radius np.sqrt(((img64_float.shape[0] / 2.0) ** 2.0) + ((img64_float.shape[1] / 2.0) ** 2.0))
-
-polar_image = cv2.linearPolar(img64_float, (img64_float.shape[0] / 2, img64_float.shape[1] / 2), Mvalue,
-                              cv2.WARP_FILL_OUTLIERS)  # 中心位置待定
-
-
-polar_image = polar_image / 255
-# plt.imshow(polar_image)
-
-
-# ==========================================================
-# same for otsu
-ret, img = cv2.threshold(i, T1, T2, cv2.THRESH_BINARY)  # 阈值要改
-# ==========================================================
-
-
-
-# ==========================================================
-# changed all center_x and center_y to cx cy
-seed = [cx, cy]  # center要改
-#
-region = region_growing_2(img, seed)
-plt.figure()
-plt.imshow(region, cmap='gray')
-plt.show()
-
-edges = feature.canny(polar_image, sigma=11)
-edges64_float = edges.astype(np.float64)
-cartesian_edges = cv2.linearPolar(edges64_float, (img64_float.shape[0] / 2, img64_float.shape[1] / 2), Mvalue,
-                                  cv2.WARP_INVERSE_MAP)  # 中心位置待定
-kernel1 = skimage.morphology.disk(5)
-kernel2 = skimage.morphology.disk(3)
-img_dilation = skimage.morphology.dilation(cartesian_edges, kernel1)
-img_erosion = skimage.morphology.erosion(img_dilation, kernel2)
-finaledge = skimage.morphology.skeletonize(img_erosion)
-edge_padd = np.zeros(i.shape)
-edge_padd[cx - 30:cx + 30, cy - 30:cy + 30] = finaledge
-contour = ((edge_padd + region) >= 1)
-
-# convex hull
-convex_hull = convex_hull_image(contour)
-plt.figure()
-plt.imshow(convex_hull, cmap='gray')
-plt.show()
-
-# low-pass filter of FFT (smoothing)
-
-
-
+print('total diff error for segmentation is: ', str(total))
 
 
 

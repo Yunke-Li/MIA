@@ -3,3 +3,4 @@ dataset
 .ipynb_checkpoints
 .idea
 __pycache__
+debug

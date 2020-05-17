@@ -1,7 +1,13 @@
 from skimage.filters import threshold_multiotsu
 from skimage.measure import label
+import skimage
 import numpy as np
 from scipy.spatial import ConvexHull
+from skimage.morphology import convex_hull_image
+import matplotlib.pyplot as plt
+import cv2
+
+
 
 def init_ROI(img, cwidth=50):
     '''
@@ -39,7 +45,7 @@ step 5. repeat 3 & 4, until no point is marked as 1
 """
 
 
-def region_growing(img, init_center, center_tl, threshold=25):
+def region_growing(img, init_center, center_tl, threshold=25, seed=None, n=4):
     """
 
     :param img: original slice image
@@ -49,23 +55,26 @@ def region_growing(img, init_center, center_tl, threshold=25):
     :return: a ndarray for the region growing result, valid points are marked as one
     """
     scan_map = np.zeros_like(img)
-    # neighbor = ([-1, -1],
-    #               [-1, 0],
-    #               [-1, 1],
-    #               [0, -1],
-    #               [0, 1],
-    #               [1, -1],
-    #               [1, 0],
-    #               [1, 1])
-    neighbor = ([1, 0], [-1, 0], [0, 1], [0, -1])
+    n4 = ([1, 0], [-1, 0], [0, 1], [0, -1])
+    n8 = ([1, 0], [-1, 0], [0, 1], [0, -1], [1,1], [-1,1], [1,-1], [-1,-1])
+    n16 = ([1, 0], [-1, 0], [0, 1], [0, -1], [1,1], [-1,1], [1,-1], [-1,-1], [1,2], [1,3], [-1,2], [-1,3], [1,-2], [1,-3], [-1,-2], [-1,-3])
+    if n==4:
+        neighbor = n4
+    elif n==8:
+        neighbor = n8
+    elif n==16:
+        neighbor = n16
     img_bound = np.array(img.shape) - [1, 1]
-
-    # step 2
-    i, j = np.where(init_center == 1)
-    pos = np.row_stack((i, j))
-    pos = pos.T
-    seed_idx = np.random.randint(len(pos))
-    seed_pos = list(pos[seed_idx] + center_tl)
+    scan_map.astype(np.float)
+    # step 2 pick a seed
+    if seed==None:
+        i, j = np.where(init_center == 1)
+        pos = np.row_stack((i, j))
+        pos = pos.T
+        seed_idx = np.random.randint(len(pos))
+        seed_pos = list(pos[seed_idx] + center_tl)
+    else:
+        seed_pos = seed
 
     # step 3
     scan_map[seed_pos[0], seed_pos[1]] = 1
@@ -91,6 +100,7 @@ def region_growing(img, init_center, center_tl, threshold=25):
 
             scan_map[base_idx[0], base_idx[1]] = 2
         scan_cnt = np.count_nonzero(scan_map == 1)
+
     return scan_map
 
 def get_convex_hull_centroid(scan_map):
@@ -177,11 +187,142 @@ def region_growing_2(img, seed):
     return outimg
 
 
+def clockwise(x,y):
+    cx = np.mean(x)
+    cy = np.mean(y)
+    a = np.arctan2(y - cy, x - cx)
+    order = a.ravel().argsort()
+    x = x[order]
+    y = y[order]
+    return np.vstack([x,y])
+
+def counterclockwise(x,y):
+    cx = np.mean(x)
+    cy = np.mean(y)
+    a = -np.arctan2(y - cy, x - cx)
+    order = a.ravel().argsort()
+    x = x[order]
+    y = y[order]
+    return np.vstack([x,y])
+
+def getConvexPoint(hull, hullP):
+    a = hullP[hull.simplices, 0]
+    a = np.reshape(a, [-1])
+    b = hullP[hull.simplices, 1]
+    b = np.reshape(b, [-1])
+    c = np.column_stack((a,b))
+
+    c = np.unique(c, axis=0)
+    a = c[:,0]
+    b = c[:,1]
+    c = clockwise(a,b)
+    return c[1,:], c[0,:]
 
 
+def fftSmooth(cutoff, x, y):
+    signal = x + 1j*y
+    # FFT and frequencies
+    fft = np.fft.fft(signal)
+    freq = np.fft.fftfreq(signal.shape[-1])
+    fft[np.abs(freq) > cutoff] = 0
+    # IFFT
+    signal_filt = np.fft.ifft(fft)
+    sx = signal_filt.real
+    sy = signal_filt.imag
+    return sx, sy
+
+def modifiedCanny(img, sigma=6):
+    edgePolar = skimage.feature.canny(img, sigma=sigma)
+    # plt.imshow(edgePolar)
+    # plt.show()
+    gauEdgePolar = skimage.filters.gaussian(edgePolar.astype(np.float),sigma=0.5)
+    smoothEdgePolar = np.digitize(gauEdgePolar, bins=np.array([0.1*np.max(gauEdgePolar)]))
+    thiningEdgePolar = skimage.morphology.skeletonize(smoothEdgePolar)
+    combine = thiningEdgePolar + edgePolar
+    combine = np.digitize(combine, bins=np.array([0.1]))
+    return combine
+
+def edgeCandidate(edge):
+    seedY = np.where(edge[1,:]==1)
+    seedY = seedY[0]
+    # shape = edge.shape
+    maxYD = 0
+
+    # top down
+    for i in seedY:
+        temp = region_growing(edge.astype(np.float), edge.astype(np.float),
+                              [0,0], seed=[1,i], threshold=1, n=8)
+        y,_ = np.where(temp==2)
+        yDisparity = np.max(y) - np.min(y)
+        if yDisparity > maxYD:
+            maxYD = yDisparity
+            candidateTD = temp
+
+    # check bottom reach
+    if maxYD >= edge.shape[1] - 3:
+        candidateBU = candidateTD
+        return candidateTD, candidateBU
+    else:
+        maxYD = 0
+        seedY = np.where(edge[-2,:]==1)
+        seedY = seedY[0]
+        for i in seedY:
+            temp = region_growing(edge.astype(np.float), edge.astype(np.float),
+                              [0,0], seed=[-2,i], threshold=1, n=8)
+            y,_ = np.where(temp==2)
+            yDisparity = np.max(y) - np.min(y)
+            if yDisparity > maxYD:
+                maxYD = yDisparity
+                candidateBU = temp
+    return candidateTD, candidateBU
+
+def getEdgeCoordinate(candidateTD, candidateBU, radius):
+    # if overlap
+    rTD, _ = np.where(candidateTD!=0)
+    rBU, _ = np.where(candidateBU!=0)
+    topBU = candidateBU[min(rBU),:]
+    cBU = np.where(topBU != 0)
+    cBU = cBU[0]
+    if max(rTD) >= min(rBU):
+        overlapMask = np.ones_like(candidateTD)
+        overlapMask[min(rBU):-1, :] = 0
+        overlapMask[-1,:] = 0
+        # overlapMask[:,cBU[0]:-1] = 0
+        # overlapMask[:,-1] = 0
+        candidateTD = candidateTD*overlapMask
+
+    finalEdge = candidateTD + candidateBU
+    finalEdge = cv2.linearPolar(finalEdge.astype(np.float), (radius, radius), radius, cv2.WARP_FILL_OUTLIERS+cv2.WARP_INVERSE_MAP )
+    # if not overlap
 
 
+    # plt.imshow(finalEdge)
+    r, c = np.where(finalEdge!=0)
+    newP = clockwise(r,c)
+    hullP = newP.T
+    hull = ConvexHull(hullP)
+    x, y = getConvexPoint(hull, hullP)
+    return x,y,convex_hull_image(finalEdge)
 
+def expension(x, y, pixNum=2):
 
+    cx = np.mean(x)
+    cy = np.mean(y)
+    tempX = x-cx
+    tempY = y-cy
+    theta = np.arctan2(y - cy, x - cx)
+    radius = (tempX**2 + tempY**2)**(1/2)
+    x_new = np.cos(theta) * (radius+pixNum)
+    y_new = np.sin(theta) * (radius+pixNum)
+    x_new = x_new + cx
+    y_new = y_new + cy
 
+    return x_new, y_new
 
+def findDiceError(img, gt):
+    overlap = img*gt
+    area = np.count_nonzero(overlap)
+    imgArea = np.count_nonzero(img)
+    gtArea = np.count_nonzero(gt)
+    error = 2*area/(gtArea + imgArea)
+    return error
