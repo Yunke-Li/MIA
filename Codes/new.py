@@ -26,7 +26,7 @@ patient_list = os.listdir(dataset_path)
 file_path = dataset_path + patient_list[0] + '/'
 file_list = os.listdir(file_path)
 for i in file_list:
-    if 'frame01.' in i:
+    if 'frame.' in i:
         file = file_path + i
 
 img = nib.load(file)

@@ -18,19 +18,16 @@ import skimage
 
 
 
-dataset_path = '/home/dj/git/MIA/dataset/training/'
+dataset_path = '/home/dj/git/MIA/dataset/training/patient027/'
 # dataset_path = r'D:\ds\training\\'
 
 
-patient_list = os.listdir(dataset_path)
-
-file_path = dataset_path + patient_list[0] + '/'
-file_list = os.listdir(file_path)
+file_list = os.listdir(dataset_path)
 for i in file_list:
     if 'frame01.' in i:
-        fileRaw = file_path + i
+        fileRaw = dataset_path + i
     elif 'frame01_' in i:
-        fileGT = file_path + i
+        fileGT = dataset_path + i
 
 raw_data = nib.load(fileRaw)
 gt_data = nib.load(fileGT)
@@ -56,28 +53,30 @@ for s in range(sliceNum):
 
     # gt preprocessing
     tempGt[tempGt!=3] = 0
-    # tempGt[tempGt==2] = 0
+    
     tempGt[tempGt==3] = 1
-    chull, x, y, sx, sy = segLV(tempRaw, xRadius)
+    chull, x, y, sx, sy, roi, cx, cy = segLV(tempRaw, xRadius)
     diff = (chull - tempGt)
-    # dice = abs(diff)
-    # fig, ax = plt.subplots()
-    # ax.imshow(dice)
-    # ax.set_title('Diff')
+    plt.subplot(1, 2, 1)
+
+    plt.imshow(roi,cmap='gray')
+    plt.plot(sx-cx,sy-cy,'-o')
+
+    plt.subplot(1, 2, 2)
     plt.imshow(diff)
     l = np.sum(diff)
     diceError[s]= findDiceError(chull, tempGt)
     d,_ = np.where(diff !=0)
     diceDiff[s] = len(d)
+    
     plt.show()
 
 
     continue
 
-
 plt.bar(range(len(diceDiff)), diceDiff)
 plt.show()
-print('total diff error for segmentation is: ', str(total))
+# print('total diff error for segmentation is: ', str(total))
 
 
 

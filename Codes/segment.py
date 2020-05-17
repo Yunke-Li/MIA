@@ -74,9 +74,10 @@ def segLV(imgRaw, width):
     thresholds = threshold_multiotsu(roi)   # updated
     # T1 = thresholds[0]   # updated
     TBlood = np.array([thresholds[1]])
+    TMuscel = np.array([thresholds[0]])
     threDiff = thresholds[1]-thresholds[0]
 
-    bloodRegion = np.digitize(roi, bins=TBlood-0.3*threDiff)
+    bloodRegion = np.digitize(roi, bins=TBlood-0.4*threDiff)
 
     # modified by Deng
 
@@ -84,17 +85,21 @@ def segLV(imgRaw, width):
     roiPolar = cv2.linearPolar(roi, (width, width), width, cv2.WARP_FILL_OUTLIERS )
     # plt.imshow(roiPolar)
     # plt.show()
-    rawEdge = modifiedCanny(roiPolar, sigma=6)
-    # plt.imshow(rawEdge)
-    # plt.show()
+    rawEdge = modifiedCanny(roiPolar, sigma=8)
+    preMask = np.ones_like(rawEdge)
+    preMask[:,0:2] = 0
+    rawEdge = rawEdge * preMask
+    plt.imshow(rawEdge)
+    plt.show()
     TD, BU = edgeCandidate(rawEdge)
     edgeX, edgeY, cEdge = getEdgeCoordinate(TD, BU, width)
     edgeX = np.concatenate((edgeX, edgeX[0:1]))
     edgeY = np.concatenate((edgeY, edgeY[0:1]))
-    edgeX, edgeY = expension(edgeX, edgeY, pixNum=3)
-    plt.imshow(roi, cmap='gray')
-    plt.plot(edgeX, edgeY, 'o-')
-    plt.show()
+    edgeX, edgeY = expension(edgeX, edgeY, pixNum=2)
+
+    # plt.imshow(roi, cmap='gray')
+    # plt.plot(edgeX, edgeY, 'o-')
+    # plt.show()
 
 
     # region growing base on the thresholding result 
@@ -117,64 +122,113 @@ def segLV(imgRaw, width):
     newP = clockwise(x,y)
     hullP = newP.T
     hull = ConvexHull(hullP)
-
-
     x, y = getConvexPoint(hull, hullP)
 
-    # combine result with canny edge
-    # canny > growing whithin threshold, pick growing, otherwise, canny
-    # canny < growing whithin threshold, pick growing
-    # canny < growing with diff larger than threshold
-    #   check mean(intensity)
-    #   mean(intensity) > TBlook + 0.5*diff, pick canny, otherwise growing
+    edgeX, edgeY = expension(edgeX, edgeY, pixNum=2)
+    rr, cc = skimage.draw.polygon(edgeX, edgeY, cEdge.shape)
+    cannyMask = np.zeros_like(cEdge)
+    cannyMask[cc,rr] = 1
 
-    diff = cEdge.astype(np.float) - chull.astype(np.float)
+    # plt.imshow(cannyMask)
+    # plt.show()
+    diff = cannyMask.astype(np.float) - chull.astype(np.float)
     nonOverlap = abs(diff)
     nonOverlapArea = np.count_nonzero(nonOverlap)
     cannyArea = np.count_nonzero(cEdge)
-    if np.sum(diff) > 0: # canny > growing
-        # expand canny area and do one more threshold to obtain the
-        edgeX, edgeY = expension(edgeX, edgeY)
-        rr, cc = skimage.draw.polygon(edgeX, edgeY, cEdge.shape)
-        cannyMask = np.zeros_like(cEdge)
-        cannyMask[rr,cc] = 1
-        plt.imshow(cannyMask)
-        plt.show()
-        pass
-    elif np.sum(diff) <= 0: # growing > canny
-        if nonOverlapArea > 0.3*cannyArea:
-            x = edgeX
-            y = edgeY
 
-            newRegion = np.digitize(roi, bins=TBlood-0.1*threDiff)
-            newRegion = newRegion * cEdge
-            # plt.imshow(newRegion)
-            # plt.show()
+    if nonOverlapArea > 0.5*cannyArea:
+        # check average pixel intensity for nonOverlap
+        tempRoi = roi * nonOverlap
+        avgI = np.sum(tempRoi)/nonOverlapArea
+        if avgI > TMuscel:
+            newRegion = cannyMask*chull
             x, y = np.where(newRegion == 1)
             newP = clockwise(x, y)
             hullP = newP.T
             hull = ConvexHull(hullP)
-
             x, y = getConvexPoint(hull, hullP)
-            pass
-        #     region growing
+            rr, cc = skimage.draw.polygon(x, y, cEdge.shape)
+            chull = np.zeros_like(cEdge)
+            chull[cc,rr] = 1
         else:
-            pass
+            # expand the canny area
+            edgeX, edgeY = expension(edgeX, edgeY, pixNum=5)
+            rr, cc = skimage.draw.polygon(edgeX, edgeY, cEdge.shape)
+            cannyMask = np.zeros_like(cEdge)
+            cannyMask[cc,rr] = 1
+            # apply mask on roi
+            tempRoi = roi * cannyMask
+            tempRoi[tempRoi==0] = 255
+            minI = np.min(tempRoi)
+            tempRoi = tempRoi * cannyMask
+            tempRoi[tempRoi==0]=minI
+
+            # biniarize the masked area
+            tempRoi = imgNorm(tempRoi)
+            tempThres = threshold_multiotsu(tempRoi, classes=2)
+            
+            newRegion = np.digitize(tempRoi, bins=0.8*tempThres)
+            newRegion = region_growing(newRegion, newRegion, [0,0], threshold=1, seed=[width, width], n=8)
+            # convechull
+            chull = convex_hull_image(newRegion)
+            # plt.imshow(chull)
+            x,y = np.where(chull==1)
+            newP = clockwise(x,y)
+            hullP = newP.T
+            hull = ConvexHull(hullP)
+            x, y = getConvexPoint(hull, hullP)
+    else:
+        if np.sum(diff) < 0: # canny < growing
+            expandNum = 4
+            thresCo = 0.5
+        else: 
+            expandNum = 3
+            thresCo = 0.7
+        # expand the canny area
+        edgeX, edgeY = expension(edgeX, edgeY, pixNum=expandNum)
+        rr, cc = skimage.draw.polygon(edgeX, edgeY, cEdge.shape)
+        cannyMask = np.zeros_like(cEdge)
+        cannyMask[cc,rr] = 1
+        # apply mask on roi
+        tempRoi = roi * cannyMask
+        tempRoi[tempRoi==0] = 255
+        minI = np.min(tempRoi)
+        tempRoi = tempRoi * cannyMask
+        tempRoi[tempRoi==0]=minI
+
+        # biniarize the masked area
+
+        tempRoi = imgNorm(tempRoi)
+        tempThres = threshold_multiotsu(tempRoi, classes=2)
+        # tempThres[0] = 2*minI
+        newRegion = np.digitize(tempRoi, bins=thresCo*tempThres)
+        newRegion = region_growing(newRegion, newRegion, [0,0], threshold=1, seed=[width, width], n=8)
+
+        # convechull
+        chull = convex_hull_image(newRegion)
+        # plt.imshow(chull)
+        x,y = np.where(chull==1)
+        newP = clockwise(x,y)
+        hullP = newP.T
+        hull = ConvexHull(hullP)
+        x, y = getConvexPoint(hull, hullP)
+
+    
 
 
     # FFT smoothing
 
 
-    sx,sy = fftSmooth(0.2, x,y)
+    sy,sx = fftSmooth(0.5, y,x)
     sx = np.concatenate((sx,sx[0:1]))
     sy = np.concatenate((sy,sy[0:1]))
 
-    plt.plot(sx,sy,'-')
-    plt.plot
-    plt.imshow(roi,cmap='gray')
-    plt.show()
+
+    rr, cc = skimage.draw.polygon(sx, sy, cEdge.shape)
+    cannyMask = np.zeros_like(cEdge)
+    cannyMask[cc,rr] = 1
     OP = np.zeros_like(imgRaw)
-    OP[cx - width:cx + width + 1, cy - width:cy + width + 1] = chull
+    OP[cx - width:cx + width + 1, cy - width:cy + width + 1] = cannyMask
 
     # recover the whole image and change the coordinate to global coordinate
-    return OP, x+cx, y+cy, sx+cx, sy+cy
+    return OP, x+cx, y+cy, sx+cx, sy+cy, roi, cx, cy

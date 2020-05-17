@@ -240,6 +240,7 @@ def modifiedCanny(img, sigma=6):
     thiningEdgePolar = skimage.morphology.skeletonize(smoothEdgePolar)
     combine = thiningEdgePolar + edgePolar
     combine = np.digitize(combine, bins=np.array([0.1]))
+    
     return combine
 
 def edgeCandidate(edge):
@@ -276,8 +277,9 @@ def edgeCandidate(edge):
                 candidateBU = temp
     return candidateTD, candidateBU
 
-def getEdgeCoordinate(candidateTD, candidateBU, radius):
+def getEdgeCoordinate(candidateTD, candidateBU, radius, mask=0):
     # if overlap
+    
     rTD, _ = np.where(candidateTD!=0)
     rBU, _ = np.where(candidateBU!=0)
     topBU = candidateBU[min(rBU),:]
@@ -287,8 +289,9 @@ def getEdgeCoordinate(candidateTD, candidateBU, radius):
         overlapMask = np.ones_like(candidateTD)
         overlapMask[min(rBU):-1, :] = 0
         overlapMask[-1,:] = 0
-        # overlapMask[:,cBU[0]:-1] = 0
-        # overlapMask[:,-1] = 0
+        if mask !=0:
+            overlapMask[:,cBU[0]:-1] = 0
+            overlapMask[:,-1] = 0
         candidateTD = candidateTD*overlapMask
 
     finalEdge = candidateTD + candidateBU
@@ -326,3 +329,8 @@ def findDiceError(img, gt):
     gtArea = np.count_nonzero(gt)
     error = 2*area/(gtArea + imgArea)
     return error
+
+
+def imgNorm(img):
+    newImg = 255 * (img-np.min(img))/(np.max(img) - np.min(img))
+    return newImg
