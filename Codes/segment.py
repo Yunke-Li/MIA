@@ -88,6 +88,7 @@ def segLV(imgRaw, width):
     rawEdge = modifiedCanny(roiPolar, sigma=8)
     preMask = np.ones_like(rawEdge)
     preMask[:,0:2] = 0
+    preMask[:,0:2] = 0
     rawEdge = rawEdge * preMask
     plt.imshow(rawEdge)
     plt.show()
@@ -140,16 +141,69 @@ def segLV(imgRaw, width):
         # check average pixel intensity for nonOverlap
         tempRoi = roi * nonOverlap
         avgI = np.sum(tempRoi)/nonOverlapArea
-        if avgI > TMuscel:
-            newRegion = cannyMask*chull
-            x, y = np.where(newRegion == 1)
-            newP = clockwise(x, y)
+        if avgI > TMuscel: # usually when canny fails
+            newMask = cannyMask*chull
+            tempRoi = roi * newMask
+            tempRoi[tempRoi==0] = 255
+            minI = np.min(tempRoi)
+            tempRoi = tempRoi * newMask
+            tempRoi[tempRoi==0]=minI
+
+            # biniarize the masked area
+
+            # tempRoi = imgNorm(tempRoi)
+            tempThres = threshold_multiotsu(tempRoi, classes=2)
+            # tempThres[0] = 2*minI
+            newRegion = np.digitize(tempRoi, bins=tempThres)
+            thresRoi = np.digitize(roi, bins=tempThres)
+
+            seedX,seedY = np.where(newRegion==1)
+            # pick a seed
+            newRegion = region_growing(thresRoi, thresRoi, [0,0], threshold=1, seed=[seedX[0], seedY[0]], n=8)
+
+            # convechull
+            chull = convex_hull_image(newRegion)
+            # plt.imshow(chull)
+            x,y = np.where(chull==1)
+            newP = clockwise(x,y)
             hullP = newP.T
             hull = ConvexHull(hullP)
             x, y = getConvexPoint(hull, hullP)
+
+            # one more expansion
+            x, y = expension(x, y, pixNum=4)
+            plt.imshow(roi,cmap='gray')
+            plt.plot(x,y,'r-')
+            plt.show()
+            rr, cc = skimage.draw.polygon(edgeX, edgeY, cEdge.shape)
+            cannyMask = np.zeros_like(cEdge)
+            cannyMask[cc,rr] = 1
+            tempRoi = roi * cannyMask
+            tempRoi[tempRoi==0] = 255
+            minI = np.min(tempRoi)
+            tempRoi = tempRoi * cannyMask
+            tempRoi[tempRoi==0]=minI
+            tempRoi = imgNorm(tempRoi)
+            tempThres = threshold_multiotsu(tempRoi, classes=3)
+            thresRoi = np.digitize(roi, bins=[tempThres[0]])
+            newRegion = region_growing(thresRoi, thresRoi, [0,0], threshold=1, seed=[seedX[0], seedY[0]], n=8)
+            x, y = expension(x, y, pixNum=2)
             rr, cc = skimage.draw.polygon(x, y, cEdge.shape)
-            chull = np.zeros_like(cEdge)
-            chull[cc,rr] = 1
+            cannyMask = np.zeros_like(cEdge)
+            cannyMask[cc,rr] = 1
+            newRegion = newRegion * cannyMask
+            
+            chull = convex_hull_image(newRegion)
+            # plt.imshow(chull)
+            x,y = np.where(chull==1)
+            newP = clockwise(x,y)
+            hullP = newP.T
+            hull = ConvexHull(hullP)
+            x, y = getConvexPoint(hull, hullP)
+
+            
+
+
         else:
             # expand the canny area
             edgeX, edgeY = expension(edgeX, edgeY, pixNum=5)
@@ -167,7 +221,7 @@ def segLV(imgRaw, width):
             tempRoi = imgNorm(tempRoi)
             tempThres = threshold_multiotsu(tempRoi, classes=2)
             
-            newRegion = np.digitize(tempRoi, bins=0.8*tempThres)
+            newRegion = np.digitize(tempRoi, bins=tempThres)
             newRegion = region_growing(newRegion, newRegion, [0,0], threshold=1, seed=[width, width], n=8)
             # convechull
             chull = convex_hull_image(newRegion)
@@ -181,9 +235,11 @@ def segLV(imgRaw, width):
         if np.sum(diff) < 0: # canny < growing
             expandNum = 4
             thresCo = 0.5
+            extraFlat = 0
         else: 
             expandNum = 3
             thresCo = 0.7
+            extraFlat = 1
         # expand the canny area
         edgeX, edgeY = expension(edgeX, edgeY, pixNum=expandNum)
         rr, cc = skimage.draw.polygon(edgeX, edgeY, cEdge.shape)
@@ -212,14 +268,15 @@ def segLV(imgRaw, width):
         hullP = newP.T
         hull = ConvexHull(hullP)
         x, y = getConvexPoint(hull, hullP)
-
+        if extraFlat:
+            x, y = expension(x, y, pixNum=1)
     
 
 
     # FFT smoothing
 
 
-    sy,sx = fftSmooth(0.5, y,x)
+    sx,sy = fftSmooth(0.5, x,y)
     sx = np.concatenate((sx,sx[0:1]))
     sy = np.concatenate((sy,sy[0:1]))
 

@@ -334,3 +334,9 @@ def findDiceError(img, gt):
 def imgNorm(img):
     newImg = 255 * (img-np.min(img))/(np.max(img) - np.min(img))
     return newImg
+
+
+def getPerpError(diff):
+    dist = np.count_nonzero(diff)
+    avgDist = dist/np.pi
+    return avgDist

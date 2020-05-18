@@ -18,7 +18,7 @@ import skimage
 
 
 
-dataset_path = '/home/dj/git/MIA/dataset/training/patient027/'
+dataset_path = '/home/dj/git/MIA/dataset/training/patient001/'
 # dataset_path = r'D:\ds\training\\'
 
 
@@ -74,9 +74,12 @@ for s in range(sliceNum):
 
     continue
 
-plt.bar(range(len(diceDiff)), diceDiff)
-plt.show()
+# plt.bar(range(len(diceDiff)), diceDiff)
+# plt.show()
 # print('total diff error for segmentation is: ', str(total))
-
+plt.bar(range(len(diceError)), diceError)
+plt.show()
+avgDice = np.sum(diceError)/sliceNum
+print('average diceError is: ', str(avgDice))
 
 
