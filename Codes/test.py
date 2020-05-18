@@ -18,9 +18,9 @@ import skimage
 
 
 
-dataset_path = '/home/dj/git/MIA/dataset/training/patient001/'
+dataset_path = '/home/dj/git/MIA/dataset/training/'
 # dataset_path = r'D:\ds\training\\'
-
+dir_list = os.listdir(dataset_path)
 
 file_list = os.listdir(dataset_path)
 for i in file_list:

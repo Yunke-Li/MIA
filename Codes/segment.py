@@ -48,6 +48,7 @@ import skimage
 
 # init_center, center_tl, threshold = init_ROI(img_data[:, :, 3, 0], cwidth=width)
 def segLV(imgRaw, width):
+    imgRaw = imgNorm(imgRaw)
     init_center, center_tl, threshold = init_ROI(imgRaw)
     img = np.digitize(imgRaw, bins=threshold)
     scan_map = region_growing(img, init_center, center_tl, threshold=1)
@@ -89,9 +90,9 @@ def segLV(imgRaw, width):
     preMask = np.ones_like(rawEdge)
     preMask[:,0:2] = 0
     preMask[:,0:2] = 0
-    rawEdge = rawEdge * preMask
-    plt.imshow(rawEdge)
-    plt.show()
+    # rawEdge = rawEdge * preMask
+    # plt.imshow(rawEdge)
+    # plt.show()
     TD, BU = edgeCandidate(rawEdge)
     edgeX, edgeY, cEdge = getEdgeCoordinate(TD, BU, width)
     edgeX = np.concatenate((edgeX, edgeX[0:1]))
@@ -110,7 +111,7 @@ def segLV(imgRaw, width):
 
     yPos = 0
     while regionBloodPloar[0,yPos]!=1:
-        yPos = np.random.randint(width)
+        yPos = yPos + 1
     seed = [0, yPos]
     polarGrowing = region_growing(regionBloodPloar,regionBloodPloar,[0,0],seed=seed, threshold=1)
     # plt.imshow(polarGrowing)
@@ -122,7 +123,11 @@ def segLV(imgRaw, width):
     x,y = np.where(chull==1)
     newP = clockwise(x,y)
     hullP = newP.T
-    hull = ConvexHull(hullP)
+    try:
+        hull = ConvexHull(hullP)
+    except:
+        print('failed to proceed the region growing')
+        return None, None, None, None, None, None, None, None
     x, y = getConvexPoint(hull, hullP)
 
     edgeX, edgeY = expension(edgeX, edgeY, pixNum=2)
@@ -167,14 +172,18 @@ def segLV(imgRaw, width):
             x,y = np.where(chull==1)
             newP = clockwise(x,y)
             hullP = newP.T
-            hull = ConvexHull(hullP)
+            try:
+                hull = ConvexHull(hullP)
+            except:
+                print('failed to proceed the region growing')
+                return None, None, None, None, None, None, None, None
             x, y = getConvexPoint(hull, hullP)
 
             # one more expansion
             x, y = expension(x, y, pixNum=4)
-            plt.imshow(roi,cmap='gray')
-            plt.plot(x,y,'r-')
-            plt.show()
+            # plt.imshow(roi,cmap='gray')
+            # plt.plot(x,y,'r-')
+            # plt.show()
             rr, cc = skimage.draw.polygon(edgeX, edgeY, cEdge.shape)
             cannyMask = np.zeros_like(cEdge)
             cannyMask[cc,rr] = 1
@@ -198,7 +207,11 @@ def segLV(imgRaw, width):
             x,y = np.where(chull==1)
             newP = clockwise(x,y)
             hullP = newP.T
-            hull = ConvexHull(hullP)
+            try:
+                hull = ConvexHull(hullP)
+            except:
+                print('failed to proceed the region growing')
+                return None, None, None, None, None, None, None, None
             x, y = getConvexPoint(hull, hullP)
 
             
@@ -229,7 +242,11 @@ def segLV(imgRaw, width):
             x,y = np.where(chull==1)
             newP = clockwise(x,y)
             hullP = newP.T
-            hull = ConvexHull(hullP)
+            try:
+                hull = ConvexHull(hullP)
+            except:
+                print('failed to proceed the region growing')
+                return None, None, None, None, None, None, None, None
             x, y = getConvexPoint(hull, hullP)
     else:
         if np.sum(diff) < 0: # canny < growing
@@ -266,7 +283,11 @@ def segLV(imgRaw, width):
         x,y = np.where(chull==1)
         newP = clockwise(x,y)
         hullP = newP.T
-        hull = ConvexHull(hullP)
+        try:
+            hull = ConvexHull(hullP)
+        except:
+            print('failed to proceed the region growing')
+            return None, None, None, None, None, None, None, None
         x, y = getConvexPoint(hull, hullP)
         if extraFlat:
             x, y = expension(x, y, pixNum=1)
@@ -289,3 +310,61 @@ def segLV(imgRaw, width):
 
     # recover the whole image and change the coordinate to global coordinate
     return OP, x+cx, y+cy, sx+cx, sy+cy, roi, cx, cy
+
+
+def segLV3DEval(rawdata, rawgt, verbose=True, saveImg=False):
+    gt = rawgt.get_fdata()
+    # img.shape[2]
+    info = rawdata.header
+    img = rawdata.get_fdata()
+    shape = img.shape
+    raw_info = info.structarr
+    xspacing = raw_info['pixdim'][1]
+    # yspacing = raw_info['pixdim'][2]
+    xRadius = int(110/xspacing/2)
+    # yRadius = int(110/yspacing/2)
+    # width = xRadius
+    sliceNum = shape[2]
+    diceError = np.zeros(sliceNum)
+    diceDiff = np.zeros(sliceNum)
+    estArea = np.zeros(sliceNum)
+
+    for s in range(sliceNum):
+        tempGt = gt[:,:,s]
+        tempRaw = img[:,:,s]
+
+        # gt preprocessing
+        tempGt[tempGt!=3] = 0
+        
+        tempGt[tempGt==3] = 1
+        chull, x, y, sx, sy, roi, cx, cy = segLV(tempRaw, xRadius)
+        if cx == None:
+            continue
+        diff = (chull - tempGt)
+        if verbose:
+            plt.subplot(1, 2, 1)
+
+            plt.imshow(roi,cmap='gray')
+            plt.plot(sx-cx,sy-cy,'-o')
+
+            plt.subplot(1, 2, 2)
+            plt.imshow(diff)
+        diceError[s]= findDiceError(chull, tempGt)
+        d,_ = np.where(diff !=0)
+        diceDiff[s] = len(d)
+        estArea[s] = np.count_nonzero(chull) 
+        plt.show()
+
+
+        continue
+    if verbose:
+        plt.bar(range(len(diceDiff)), diceError)
+        plt.show()
+    # print('total diff error for segmentation is: ', str(total))
+    avgDice = np.sum(diceError)/np.count_nonzero(diceError)
+    print('average diceError is: ', str(avgDice))
+    print('segmentation failure counts: ', str(len(diceError)-np.count_nonzero(diceError)), ' out of ', str(sliceNum))
+
+    # what should be output?
+    # a sequence of area, a sequence of diceError
+    # how to estimate the volume?
