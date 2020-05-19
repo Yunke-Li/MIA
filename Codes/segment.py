@@ -59,6 +59,9 @@ def segLV(imgRaw, width):
     # plt.show()
 
     cx, cy = get_convex_hull_centroid(scan_map)
+    if cx is None:
+        print('failure in finding the initial ROI')
+        return None, None, None, None, None, None, None, None
     cx = int(cx)
     cy = int(cy)
 
@@ -94,7 +97,13 @@ def segLV(imgRaw, width):
     # plt.imshow(rawEdge)
     # plt.show()
     TD, BU = edgeCandidate(rawEdge)
+    if TD is None:
+        print('failed to find the canny edge')
+        return None, None, None, None, None, None, None, None
     edgeX, edgeY, cEdge = getEdgeCoordinate(TD, BU, width)
+    if edgeX is None:
+        print('failed to find the canny edge')
+        return None, None, None, None, None, None, None, None
     edgeX = np.concatenate((edgeX, edgeX[0:1]))
     edgeY = np.concatenate((edgeY, edgeY[0:1]))
     edgeX, edgeY = expension(edgeX, edgeY, pixNum=2)
@@ -112,6 +121,10 @@ def segLV(imgRaw, width):
     yPos = 0
     while regionBloodPloar[0,yPos]!=1:
         yPos = yPos + 1
+        if yPos >= regionBloodPloar.shape[0]:
+            print('failed to initial the ROI')
+            return None, None, None, None, None, None, None, None
+
     seed = [0, yPos]
     polarGrowing = region_growing(regionBloodPloar,regionBloodPloar,[0,0],seed=seed, threshold=1)
     # plt.imshow(polarGrowing)
@@ -337,22 +350,22 @@ def segLV3DEval(rawdata, rawgt, verbose=True, saveImg=False):
         tempGt[tempGt!=3] = 0
         
         tempGt[tempGt==3] = 1
-        chull, x, y, sx, sy, roi, cx, cy = segLV(tempRaw, xRadius)
-        if cx == None:
+        result = segLV(tempRaw, xRadius)
+        if result[0] is None:
             continue
-        diff = (chull - tempGt)
+        diff = (result[0] - tempGt)
         if verbose:
             plt.subplot(1, 2, 1)
 
-            plt.imshow(roi,cmap='gray')
-            plt.plot(sx-cx,sy-cy,'-o')
+            plt.imshow(result[5],cmap='gray')
+            plt.plot(result[3]-result[7],result[4]-result[8],'-o')
 
             plt.subplot(1, 2, 2)
             plt.imshow(diff)
-        diceError[s]= findDiceError(chull, tempGt)
+        diceError[s]= findDiceError(result[0], tempGt)
         d,_ = np.where(diff !=0)
         diceDiff[s] = len(d)
-        estArea[s] = np.count_nonzero(chull) 
+        estArea[s] = np.count_nonzero(result[0]) 
         plt.show()
 
 
@@ -368,3 +381,4 @@ def segLV3DEval(rawdata, rawgt, verbose=True, saveImg=False):
     # what should be output?
     # a sequence of area, a sequence of diceError
     # how to estimate the volume?
+    return avgDice, diceError

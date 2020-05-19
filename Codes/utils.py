@@ -23,11 +23,32 @@ def init_ROI(img, cwidth=50):
     thresholds = threshold_multiotsu(ROI, classes=2)
     regions = np.digitize(ROI, bins=thresholds)
     label_img = label(regions)
+    # label_img2 = label(regions)
     _, cnt = np.unique(label_img, return_counts=True)
     cnt = np.delete(cnt, 0)
     idx = np.argmax(cnt) + 1
     label_img[label_img != idx] = 0
     label_img[label_img != 0] = 1
+
+    # # calculate pixel intensity
+    # tempRoi = ROI * label_img
+    # meanI = np.sum(tempRoi) / np.count_nonzero(tempRoi)
+
+    # # compare the second largest
+    # cnt = np.delete(cnt, np.argmax(cnt))
+    # idx = np.argmax(cnt) + 2
+    # label_img2[label_img2 != idx] = 0
+    # label_img2[label_img2 != 0] = 1
+    # tempRoi = ROI * label_img2
+    # meanI2 = np.sum(tempRoi) / np.count_nonzero(tempRoi)
+
+    # # instead of choosing the largest value, choose the region with largest intensity
+
+    # if meanI > meanI2:
+    #     opImg = label_img
+    # else:
+    #     opImg = label_img2
+
     return label_img, center_tl, thresholds
 
 """
@@ -111,7 +132,10 @@ def get_convex_hull_centroid(scan_map):
     """
     r, c = np.where(scan_map == np.max(scan_map))
     points = np.row_stack((r, c)).T
-    hull = ConvexHull(points)
+    try:
+        hull = ConvexHull(points)
+    except:
+        return [None, None]
 
     # Get centoid
     cx = np.mean(hull.points[hull.vertices, 0])
@@ -248,7 +272,8 @@ def edgeCandidate(edge):
     seedY = seedY[0]
     # shape = edge.shape
     maxYD = 0
-
+    candidateTD = None
+    candidateBU = None
     # top down
     for i in seedY:
         temp = region_growing(edge.astype(np.float), edge.astype(np.float),
@@ -267,6 +292,8 @@ def edgeCandidate(edge):
         maxYD = 0
         seedY = np.where(edge[-2,:]==1)
         seedY = seedY[0]
+        
+        
         for i in seedY:
             temp = region_growing(edge.astype(np.float), edge.astype(np.float),
                               [0,0], seed=[-2,i], threshold=1, n=8)
@@ -275,6 +302,13 @@ def edgeCandidate(edge):
             if yDisparity > maxYD:
                 maxYD = yDisparity
                 candidateBU = temp
+    
+    if candidateTD is None:
+        if candidateBU is not None:
+            candidateTD = candidateBU
+    elif candidateBU is None:
+        candidateBU = candidateTD
+
     return candidateTD, candidateBU
 
 def getEdgeCoordinate(candidateTD, candidateBU, radius, mask=0):
@@ -303,7 +337,10 @@ def getEdgeCoordinate(candidateTD, candidateBU, radius, mask=0):
     r, c = np.where(finalEdge!=0)
     newP = clockwise(r,c)
     hullP = newP.T
-    hull = ConvexHull(hullP)
+    try:
+        hull = ConvexHull(hullP)
+    except:
+        return None, None, None
     x, y = getConvexPoint(hull, hullP)
     return x,y,convex_hull_image(finalEdge)
 
