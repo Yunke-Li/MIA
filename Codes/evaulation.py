@@ -31,7 +31,7 @@ esDiceDetail = [0] * studyNum
 # # ===================================================================
 # # single study run
 # # ===================================================================
-file_path = dataset_path + 'patient046'
+file_path = dataset_path + 'patient004'
 f_list = os.listdir(file_path)
 # read config
 esSlice, edSlice = getEDES(f_list, file_path)

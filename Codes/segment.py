@@ -330,9 +330,13 @@ def segLV(imgRaw, width):
         print('failed to proceed the region growing')
         return None, None, None, None, None, None, None, None
     xTemp,yTemp = getConvexPoint(hull, hullP)
+    xTemp = np.concatenate((xTemp, xTemp[0:1]))
+    yTemp = np.concatenate((yTemp, yTemp[0:1]))
+    x = np.concatenate((x, x[0:1]))
+    y = np.concatenate((y, y[0:1]))
     
     # recover the whole image and change the coordinate to global coordinate
-    return OP, xTemp, yTemp, sx+cx, sy+cy, roi, cx, cy
+    return OP, xTemp, yTemp, x, y, roi, cx, cy
 
 
 def segLV3DEval(rawdata, rawgt, verbose=True, saveImg=False):
@@ -359,22 +363,22 @@ def segLV3DEval(rawdata, rawgt, verbose=True, saveImg=False):
         tempGt[tempGt!=3] = 0
         
         tempGt[tempGt==3] = 1
-        result = segLV(tempRaw, xRadius)
-        if result[0] is None:
+        OP, xTemp, yTemp, x, y, roi, cx, cy = segLV(tempRaw, xRadius)
+        if OP is None:
             continue
-        diff = (result[0] - tempGt)
+        diff = (OP - tempGt)
         if verbose:
             plt.subplot(1, 2, 1)
 
-            plt.imshow(tempRaw,cmap='gray')
-            plt.plot(result[1],result[2],'-o')
+            plt.imshow(roi,cmap='gray')
+            plt.plot(x,y,'r-')
 
             plt.subplot(1, 2, 2)
             plt.imshow(diff)
-        diceError[s]= findDiceError(result[0], tempGt)
+        diceError[s]= findDiceError(OP, tempGt)
         d,_ = np.where(diff !=0)
         diceDiff[s] = len(d)
-        estArea[s] = np.count_nonzero(result[0]) 
+        estArea[s] = np.count_nonzero(OP) 
         plt.show()
 
 
