@@ -321,8 +321,18 @@ def segLV(imgRaw, width):
     OP = np.zeros_like(imgRaw)
     OP[cx - width:cx + width + 1, cy - width:cy + width + 1] = cannyMask
 
+    xTemp,yTemp = np.where(OP==1) 
+    newP = clockwise(xTemp,yTemp)
+    hullP = newP.T
+    try:
+        hull = ConvexHull(hullP)
+    except:
+        print('failed to proceed the region growing')
+        return None, None, None, None, None, None, None, None
+    xTemp,yTemp = getConvexPoint(hull, hullP)
+    
     # recover the whole image and change the coordinate to global coordinate
-    return OP, x+cx, y+cy, sx+cx, sy+cy, roi, cx, cy
+    return OP, xTemp, yTemp, sx+cx, sy+cy, roi, cx, cy
 
 
 def segLV3DEval(rawdata, rawgt, verbose=True, saveImg=False):
@@ -345,7 +355,6 @@ def segLV3DEval(rawdata, rawgt, verbose=True, saveImg=False):
     for s in range(sliceNum):
         tempGt = gt[:,:,s]
         tempRaw = img[:,:,s]
-
         # gt preprocessing
         tempGt[tempGt!=3] = 0
         
@@ -357,8 +366,8 @@ def segLV3DEval(rawdata, rawgt, verbose=True, saveImg=False):
         if verbose:
             plt.subplot(1, 2, 1)
 
-            plt.imshow(result[5],cmap='gray')
-            plt.plot(result[3]-result[7],result[4]-result[8],'-o')
+            plt.imshow(tempRaw,cmap='gray')
+            plt.plot(result[1],result[2],'-o')
 
             plt.subplot(1, 2, 2)
             plt.imshow(diff)

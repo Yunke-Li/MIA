@@ -28,62 +28,66 @@ esDice = np.zeros(studyNum)
 edDiceDetail = [0] * studyNum
 esDiceDetail = [0] * studyNum
 
-# ===================================================================
-# single study run
-# ===================================================================
-# file_path = dataset_path + 'patient035'
-# f_list = os.listdir(file_path)
-# # read config
-# esSlice, edSlice = getEDES(f_list, file_path)
-# for i in f_list:
-#     print(i)
-#     if 'frame'+edSlice in i:
-#         if 'gt' in i:
-#             edFileGTName = file_path + '/' + i
-#         else:
-#             edFileName = file_path + '/' + i
-#     elif 'frame'+esSlice in i:
-#         if 'gt' in i:
-#             esFileGTName = file_path + '/' + i
-#         else:
-#             esFileName = file_path + '/' + i
-# edRaw = nib.load(edFileName)
-# edGT = nib.load(edFileGTName)
-# esRaw = nib.load(esFileName)
-# esGT = nib.load(esFileGTName)
+# # ===================================================================
+# # single study run
+# # ===================================================================
+file_path = dataset_path + 'patient046'
+f_list = os.listdir(file_path)
+# read config
+esSlice, edSlice = getEDES(f_list, file_path)
+for i in f_list:
+    print(i)
+    if 'frame'+edSlice in i:
+        if 'gt' in i:
+            edFileGTName = file_path + '/' + i
+        else:
+            edFileName = file_path + '/' + i
+    elif 'frame'+esSlice in i:
+        if 'gt' in i:
+            esFileGTName = file_path + '/' + i
+        else:
+            esFileName = file_path + '/' + i
+edRaw = nib.load(edFileName)
+edGT = nib.load(edFileGTName)
+esRaw = nib.load(esFileName)
+esGT = nib.load(esFileGTName)
                 
-# segLV3DEval(edRaw, edGT, verbose=False)
-# segLV3DEval(esRaw, esGT, verbose=False)
+segLV3DEval(edRaw, edGT, verbose=True)
+segLV3DEval(esRaw, esGT, verbose=True)
 
 
 
 
-# loop over all the training data
-for d in range(len(dir_list)):
-# d = dir_list[0]
-    file_path = dataset_path + dir_list[d]
-    f_list = os.listdir(file_path)
-    # read config
-    esSlice, edSlice = getEDES(f_list, file_path)
-    for i in f_list:
-        print(i)
-        if 'frame'+edSlice in i:
-            if 'gt' in i:
-                edFileGTName = file_path + '/' + i
-            else:
-                edFileName = file_path + '/' + i
-        elif 'frame'+esSlice in i:
-            if 'gt' in i:
-                esFileGTName = file_path + '/' + i
-            else:
-                esFileName = file_path + '/' + i
-    edRaw = nib.load(edFileName)
-    edGT = nib.load(edFileGTName)
-    esRaw = nib.load(esFileName)
-    esGT = nib.load(esFileGTName)
+# # loop over all the training data
+# totalStudy = len(dir_list)
+# preName = 'patient'
+
+
+# for d in range(len(dir_list)):
+# # d = dir_list[0]
+#     file_path = dataset_path + preName + str(d+1).zfill(3)
+#     f_list = os.listdir(file_path)
+#     # read config
+#     esSlice, edSlice = getEDES(f_list, file_path)
+#     for i in f_list:
+#         print(i)
+#         if 'frame'+edSlice in i:
+#             if 'gt' in i:
+#                 edFileGTName = file_path + '/' + i
+#             else:
+#                 edFileName = file_path + '/' + i
+#         elif 'frame'+esSlice in i:
+#             if 'gt' in i:
+#                 esFileGTName = file_path + '/' + i
+#             else:
+#                 esFileName = file_path + '/' + i
+#     edRaw = nib.load(edFileName)
+#     edGT = nib.load(edFileGTName)
+#     esRaw = nib.load(esFileName)
+#     esGT = nib.load(esFileGTName)
                     
-    edDice[d], edDiceDetail[d] = segLV3DEval(edRaw, edGT, verbose=False)
-    esDice[d], esDiceDetail[d] = segLV3DEval(esRaw, esGT, verbose=False)
+#     edDice[d], edDiceDetail[d] = segLV3DEval(edRaw, edGT, verbose=False)
+#     esDice[d], esDiceDetail[d] = segLV3DEval(esRaw, esGT, verbose=False)
 
-np.save('edDiceErrorDetial.npy',edDiceDetail)
-np.save('esDiceErrorDetial.npy',esDiceDetail)
+# np.save('edDiceErrorDetail.npy',edDiceDetail)
+# np.save('esDiceErrorDetail.npy',esDiceDetail)

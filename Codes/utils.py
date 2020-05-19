@@ -9,7 +9,7 @@ import cv2
 
 
 
-def init_ROI(img, cwidth=50):
+def init_ROI(img, cwidth=50, verbose=False):
     '''
 
     :param img: 2d ndarray
@@ -29,26 +29,16 @@ def init_ROI(img, cwidth=50):
     idx = np.argmax(cnt) + 1
     label_img[label_img != idx] = 0
     label_img[label_img != 0] = 1
-
-    # # calculate pixel intensity
-    # tempRoi = ROI * label_img
-    # meanI = np.sum(tempRoi) / np.count_nonzero(tempRoi)
-
-    # # compare the second largest
-    # cnt = np.delete(cnt, np.argmax(cnt))
-    # idx = np.argmax(cnt) + 2
-    # label_img2[label_img2 != idx] = 0
-    # label_img2[label_img2 != 0] = 1
-    # tempRoi = ROI * label_img2
-    # meanI2 = np.sum(tempRoi) / np.count_nonzero(tempRoi)
-
-    # # instead of choosing the largest value, choose the region with largest intensity
-
-    # if meanI > meanI2:
-    #     opImg = label_img
-    # else:
-    #     opImg = label_img2
-
+    
+    if verbose:
+        fig = plt.figure()
+        ax1 = fig.add_subplot(121)
+        ax1.imshow(ROI, cmap='gray')
+        ax1.set_title('initial ROI guess')
+        ax2 = fig.add_subplot(122)
+        ax2.imshow(label_img)
+        ax2.set_title('binarized ROI')
+        plt.show()
     return label_img, center_tl, thresholds
 
 """
