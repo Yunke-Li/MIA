@@ -9,7 +9,7 @@ import cv2
 
 
 
-def init_ROI(img, cwidth=50, verbose=False):
+def init_ROI(img, cwidth=50, verbose=True):
     '''
 
     :param img: 2d ndarray
@@ -31,13 +31,19 @@ def init_ROI(img, cwidth=50, verbose=False):
     label_img[label_img != 0] = 1
     
     if verbose:
+        boundingBoxX = [center_tl[0], center_br[0], center_br[0], center_tl[0], center_tl[0]]
+        boundingBoxY = [center_tl[1], center_tl[1], center_br[1], center_br[1], center_tl[1]]
         fig = plt.figure()
-        ax1 = fig.add_subplot(121)
-        ax1.imshow(ROI, cmap='gray')
-        ax1.set_title('initial ROI guess')
-        ax2 = fig.add_subplot(122)
-        ax2.imshow(label_img)
-        ax2.set_title('binarized ROI')
+        ax1 = fig.add_subplot(131)
+        ax1.imshow(img, cmap='gray')
+        ax1.set_title('bounding box')
+        ax1 = plt.plot(boundingBoxY, boundingBoxX)
+        ax2 = fig.add_subplot(132)
+        ax2.imshow(ROI, cmap='gray')
+        ax2.set_title('initial ROI guess')
+        ax3 = fig.add_subplot(133)
+        ax3.imshow(label_img)
+        ax3.set_title('binarized ROI')
         plt.show()
     return label_img, center_tl, thresholds
 
