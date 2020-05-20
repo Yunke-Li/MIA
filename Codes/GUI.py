@@ -22,29 +22,56 @@ class MyWindow(QtWidgets.QWidget):
     def __init__(self):
         super(MyWindow, self).__init__()
         self.setObjectName("MainWindow")
-        self.resize(2000, 1000)
+        self.resize(1030, 650)
+        self.setWindowTitle("Medical Image Analysis Project Demo by Jianning Deng & Yunke Li")
+        font_1 = QtGui.QFont()
+        font_1.setFamily("Arial")
+        font_1.setPointSize(12)
+
+        font_2 = QtGui.QFont()
+        font_2.setFamily("Microsoft YaHei")
+        font_2.setPointSize(22)
+
+        self.Title = QtWidgets.QLabel(self)
+        self.Title.setText("MIA DEMO")
+        self.Title.setFont(font_2)
+        self.Title.move(50, 50)
+        self.Title.adjustSize()
+
+        self.Name = QtWidgets.QLabel(self)
+        self.Name.setText("May, 2020 MSCV1")
+        self.Name.setFont(font_1)
+        self.Name.move(70, 120)
+        self.Name.adjustSize()
+
+        self.logo = QtWidgets.QLabel(self)
+        self.logo.setPixmap(QtGui.QPixmap('../logo.png'))
+        self.logo.move(720, 50)
+
         self.LoadRawButton = QtWidgets.QPushButton(self)
+        self.LoadRawButton.setGeometry(70, 200, 200, 50)
         self.LoadRawButton.setObjectName("LoadButton")
-        self.LoadRawButton.setText("Load Raw File")
+        self.LoadRawButton.setText("Load NIFTI File")
         self.LoadRawButton.clicked.connect(self.LoadFile)
 
-        self.LoadEDGTButton = QtWidgets.QPushButton(self)
-        self.LoadEDGTButton.setObjectName("LoadEDGTButton")
-        self.LoadEDGTButton.setText("Load ED GT")
-        self.LoadEDGTButton.clicked.connect(self.LoadEDGT)
-        self.LoadEDGTButton.move(500, 0)
-
-        self.LoadESGTButton = QtWidgets.QPushButton(self)
-        self.LoadESGTButton.setObjectName("LoadESGTButton")
-        self.LoadESGTButton.setText("Load ES GT")
-        self.LoadESGTButton.clicked.connect(self.LoadESGT)
-        self.LoadESGTButton.move(700, 0)
+        # self.LoadEDGTButton = QtWidgets.QPushButton(self)
+        # self.LoadEDGTButton.setObjectName("LoadEDGTButton")
+        # self.LoadEDGTButton.setText("Load ED GT")
+        # self.LoadEDGTButton.clicked.connect(self.LoadEDGT)
+        # self.LoadEDGTButton.move(500, 0)
+        #
+        # self.LoadESGTButton = QtWidgets.QPushButton(self)
+        # self.LoadESGTButton.setObjectName("LoadESGTButton")
+        # self.LoadESGTButton.setText("Load ES GT")
+        # self.LoadESGTButton.clicked.connect(self.LoadESGT)
+        # self.LoadESGTButton.move(700, 0)
 
         self.ComputeVButton = QtWidgets.QPushButton(self)
         self.ComputeVButton.setObjectName("ComputeV")
         self.ComputeVButton.setText("Compute Volume")
         self.ComputeVButton.clicked.connect(self.ComputeV)
-        self.ComputeVButton.move(900, 0)
+        self.ComputeVButton.setGeometry(70, 360, 200, 50)
+
         # self.LoadGTButton = QtWidgets.QPushButton(self)
         # self.LoadGTButton.setObjectName("LoadGTButton")
         # self.LoadGTButton.setText("LoadGT")
@@ -52,92 +79,139 @@ class MyWindow(QtWidgets.QWidget):
 
         self.FrameSlider = QtWidgets.QSlider(Qt.Horizontal, self)
         self.FrameSlider.setObjectName("FrameSlider")
-        self.FrameSlider.move(200, 0)
-        self.FrameSlider.setMinimum(1)
+        # self.FrameSlider.move(350, 270)
+
+        self.FrameLabel = QtWidgets.QLabel(self)
+        self.FrameLabel.setText("Frame: ")
+        self.FrameLabel.move(350, 270)
+        self.FrameLabel.adjustSize()
+
+        self.FrameSlider.setGeometry(410, 270, 170, 30)
+        self.FrameSlider.setMinimum(0)
         self.FrameSlider.setMaximum(29)
         self.FrameSlider.setValue(0)
         self.FrameSlider.setTickPosition(QSlider.TicksBelow)
         self.FrameSlider.setTickInterval(6)
         self.FrameSlider.valueChanged.connect(self.FrameChanged)
 
+        self.FrameDisplay = QtWidgets.QLabel(self)
+        self.FrameDisplay.setText(str(self.FrameSlider.value() + 1))
+        self.FrameDisplay.setObjectName("FrameDisplay")
+        self.FrameDisplay.move(590, 270)
+
+        self.SliceLabel = QtWidgets.QLabel(self)
+        self.SliceLabel.setText("Slice: ")
+        self.SliceLabel.move(350, 300)
+        self.SliceLabel.adjustSize()
+
         self.SliceSlider = QtWidgets.QSlider(Qt.Horizontal, self)
         self.SliceSlider.setObjectName("SliceSlider")
-        self.SliceSlider.move(200, 100)
+        # self.SliceSlider.move(350, 300)
+        self.SliceSlider.setGeometry(410, 300, 170, 30)
         self.SliceSlider.setMinimum(0)
         self.SliceSlider.setMaximum(9)
-        self.SliceSlider.setValue(1)
+        self.SliceSlider.setValue(0)
         self.SliceSlider.setTickPosition(QSlider.TicksBelow)
         self.SliceSlider.setTickInterval(2)
         self.SliceSlider.valueChanged.connect(self.SliceChanged)
 
+        self.SliceDisplay = QtWidgets.QLabel(self)
+        self.SliceDisplay.setText(str(self.SliceSlider.value() + 1))
+        self.SliceDisplay.setObjectName("SliceDisplay")
+        self.SliceDisplay.move(590, 300)
+
         self.ShowMap = QtWidgets.QLabel(self)
-        self.ShowMap.setGeometry(100, 300, 500, 300)
+        self.ShowMap.move(350, 50)
         self.ShowMap.setObjectName("ShowMap")
         self.ShowMap.setScaledContents(True)
+        self.ShowMap.setPixmap(QtGui.QPixmap('../image.png'))
+
+        self.EDSliceLabel = QtWidgets.QLabel(self)
+        self.EDSliceLabel.setText("Slice: ")
+        self.EDSliceLabel.move(350, 570)
+        self.EDSliceLabel.adjustSize()
 
         self.EDSliceSlider = QtWidgets.QSlider(Qt.Horizontal, self)
         self.EDSliceSlider.setObjectName("EDSliceSlider")
-        self.EDSliceSlider.move(180, 300)
+        # self.EDSliceSlider.move(350, 570)
+        self.EDSliceSlider.setGeometry(410, 570, 170, 30)
         self.EDSliceSlider.setMinimum(0)
         self.EDSliceSlider.setMaximum(9)
-        self.EDSliceSlider.setValue(1)
+        self.EDSliceSlider.setValue(0)
         self.EDSliceSlider.setTickPosition(QSlider.TicksBelow)
         self.EDSliceSlider.setTickInterval(2)
         self.EDSliceSlider.valueChanged.connect(self.EDSliceChanged)
 
+        self.EDSliceDisplay = QtWidgets.QLabel(self)
+        self.EDSliceDisplay.setText(str(self.EDSliceSlider.value() + 1))
+        self.EDSliceDisplay.setObjectName("EDSlice")
+        self.EDSliceDisplay.move(590, 570)
+
         self.EDMap = QtWidgets.QLabel(self)
-        self.EDMap.setGeometry(250, 300, 500, 300)
+        self.EDMap.move(350, 350)
         self.EDMap.setObjectName("EDShowMap")
         self.EDMap.setScaledContents(True)
+        self.EDMap.setPixmap(QtGui.QPixmap('../image.png'))
+
+        self.ESSliceLabel = QtWidgets.QLabel(self)
+        self.ESSliceLabel.setText("Slice: ")
+        self.ESSliceLabel.move(700, 570)
+        self.ESSliceLabel.adjustSize()
 
         self.ESSliceSlider = QtWidgets.QSlider(Qt.Horizontal, self)
         self.ESSliceSlider.setObjectName("ESSliceSlider")
-        self.ESSliceSlider.move(1000, 300)
+        # self.ESSliceSlider.move(700, 570)
+        self.ESSliceSlider.setGeometry(760, 570, 170, 30)
         self.ESSliceSlider.setMinimum(0)
         self.ESSliceSlider.setMaximum(9)
-        self.ESSliceSlider.setValue(1)
+        self.ESSliceSlider.setValue(0)
         self.ESSliceSlider.setTickPosition(QSlider.TicksBelow)
         self.ESSliceSlider.setTickInterval(2)
         self.ESSliceSlider.valueChanged.connect(self.ESSliceChanged)
 
+        self.ESSliceDisplay = QtWidgets.QLabel(self)
+        self.ESSliceDisplay.setText(str(self.ESSliceSlider.value() + 1))
+        self.ESSliceDisplay.setObjectName("ESSlice")
+        self.ESSliceDisplay.move(940, 570)
+
         self.ESMap = QtWidgets.QLabel(self)
-        self.ESMap.setGeometry(1200, 300, 500, 300)
+        self.ESMap.move(700, 350)
         self.ESMap.setObjectName("ESShowMap")
         self.ESMap.setScaledContents(True)
-
-        # self.ShowButton = QtWidgets.QPushButton(self)
-        # self.ShowButton.setObjectName("ShowButton")
-        # self.ShowButton.setText("Show")
-        # self.ShowButton.move(0, 40)
-        # self.ShowButton.clicked.connect(self.Show)
-
-        # self.comboBox = QtWidgets.QComboBox(self)
-        # self.comboBox.setGeometry(QtCore.QRect(200, 200, 60, 22))
-        # self.comboBox.setObjectName("comboBox")
-        # self.comboBox.addItem("1")
-        # self.comboBox.addItem("2")
-        # self.comboBox.addItem("3")
-        # self.comboBox.addItem("4")
-        # self.comboBox.addItem("5")
-        # self.comboBox.addItem("6")
-        # self.comboBox.addItem("7")
-        # self.comboBox.addItem("8")
-        # self.comboBox.addItem("9")
-        # self.comboBox.addItem("10")
-        # index = self.comboBox.findText("1", QtCore.Qt.MatchFixedString)
-        # self.comboBox.setCurrentIndex(index)
-        # self.comboBox.setGeometry(120, 0, 100, 30)
+        self.ESMap.setPixmap(QtGui.QPixmap('../image.png'))
 
         self.SegButton = QtWidgets.QPushButton(self)
         self.SegButton.setObjectName("Segment")
         self.SegButton.setText("Segment")
-        self.SegButton.move(0, 70)
+        self.SegButton.setGeometry(70, 280, 200, 50)
         self.SegButton.clicked.connect(self.Segment)
 
-        self.ErButton = QtWidgets.QPushButton(self)
-        self.ErButton.setObjectName("Error")
-        self.ErButton.setText("Error")
-        self.ErButton.move(0, 100)
+        self.EDVLabel = QtWidgets.QLabel(self)
+        self.EDVLabel.setText("ED Volume(mm^3): ")
+        self.EDVLabel.move(70, 450)
+        self.EDVLabel.setFont(font_1)
+        self.EDVLabel.adjustSize()
+
+        self.EDVShow = QtWidgets.QLineEdit(self)
+        self.EDVShow.setText("0")
+        self.EDVShow.setFont(font_1)
+        self.EDVShow.setGeometry(70, 480, 200, 30)
+
+        self.ESVLabel = QtWidgets.QLabel(self)
+        self.ESVLabel.setText("ES Volume(mm^3): ")
+        self.ESVLabel.move(70, 530)
+        self.ESVLabel.setFont(font_1)
+        self.ESVLabel.adjustSize()
+
+        self.ESVShow = QtWidgets.QLineEdit(self)
+        self.ESVShow.setText("0")
+        self.ESVShow.setFont(font_1)
+        self.ESVShow.setGeometry(70, 560, 200, 30)
+
+        # self.ErButton = QtWidgets.QPushButton(self)
+        # self.ErButton.setObjectName("Error")
+        # self.ErButton.setText("Error")
+        # self.ErButton.move(0, 100)
 
         # self.ErrorDisplay = QtWidgets.QLineEdit(self)
         # self.ErrorDisplay.setObjectName("Error")
@@ -169,7 +243,6 @@ class MyWindow(QtWidgets.QWidget):
         self.SegmentResult_ED = None
         self.SegmentResult_ES = None
 
-
     def LoadFile(self):
         filename, _ = QFileDialog.getOpenFileName(self, "Open Nifti File", "./", "All Files (*);;NIFTI (*.gz)")
         self.filename = filename
@@ -183,9 +256,9 @@ class MyWindow(QtWidgets.QWidget):
         lines = f.readlines()
         for lines in lines:
             if "ED" in lines:
-                self.EDIndex = int(lines.replace('ED: ', ''))
+                self.EDIndex = int(lines.replace('ED: ', '')) - 1
             if "ES" in lines:
-                self.ESIndex = int(lines.replace('ES: ', ''))
+                self.ESIndex = int(lines.replace('ES: ', '')) - 1
         print("Load Successfully!")
 
     def LoadEDGT(self):
@@ -212,6 +285,8 @@ class MyWindow(QtWidgets.QWidget):
         self.qPix = img_pil.toqpixmap()
         self.ShowMap.setPixmap(self.qPix)
         self.ShowMap.adjustSize()
+        self.FrameDisplay.setText(str(self.FrameSlider.value() + 1))
+        self.FrameDisplay.adjustSize()
 
     def SliceChanged(self):
         self.SliceIndex = self.SliceSlider.value()
@@ -223,6 +298,8 @@ class MyWindow(QtWidgets.QWidget):
         self.qPix = img_pil.toqpixmap()
         self.ShowMap.setPixmap(self.qPix)
         self.ShowMap.adjustSize()
+        self.SliceDisplay.setText(str(self.SliceSlider.value() + 1))
+        self.SliceDisplay.adjustSize()
 
     def EDSliceChanged(self):
         self.EDSliceIndex = self.EDSliceSlider.value()
@@ -234,6 +311,8 @@ class MyWindow(QtWidgets.QWidget):
         self.qPix_ED = img_pil.toqpixmap()
         self.EDMap.setPixmap(self.qPix_ED)
         self.EDMap.adjustSize()
+        self.EDSliceDisplay.setText(str(self.EDSliceIndex + 1))
+        self.EDSliceDisplay.adjustSize()
 
     def ESSliceChanged(self):
         self.ESSliceIndex = self.ESSliceSlider.value()
@@ -245,6 +324,8 @@ class MyWindow(QtWidgets.QWidget):
         self.qPix_ES = img_pil.toqpixmap()
         self.ESMap.setPixmap(self.qPix_ES)
         self.ESMap.adjustSize()
+        self.ESSliceDisplay.setText(str(self.ESSliceIndex + 1))
+        self.ESSliceDisplay.adjustSize()
 
     def Segment(self):
         if self.rawdata is None:
@@ -269,7 +350,7 @@ class MyWindow(QtWidgets.QWidget):
 
         self.SegmentResult_ED = segment_ED * 255
         self.SegmentResult_ES = segment_ES * 255
-        print("Segment successfully!")
+        print("Segment Done!")
 
     def ComputeV(self):
         if self.SegmentResult_ED is None:
@@ -277,15 +358,31 @@ class MyWindow(QtWidgets.QWidget):
         if self.SegmentResult_ES is None:
             return
         zooms = self.info.get_zooms()
+        [_, _, s_ED] = self.SegmentResult_ED.shape
+        [_, _, s_ES] = self.SegmentResult_ES.shape
+        count_outlier_ED = 0
+        count_outlier_ES = 0
+        for s in range(s_ED):
+            slice_ED = self.SegmentResult_ED[:, :, s] / 255
+            if slice_ED.sum() < 10:
+                count_outlier_ED = count_outlier_ED + 1
+
+        for s in range(s_ES):
+            slice_ES = self.SegmentResult_ES[:, :, s] / 255
+            if slice_ES.sum() < 10:
+                count_outlier_ES = count_outlier_ES + 1
+
         Voxel_Volume = zooms[0] * zooms[1] * zooms[3]
         SegmentResult_ED_Count = self.SegmentResult_ED / 255
         Voxel_ED = SegmentResult_ED_Count.sum()
-        Volume_ED = Voxel_Volume * Voxel_ED
+        Volume_ED = Voxel_Volume * Voxel_ED / (s_ED - count_outlier_ED) * s_ED
         SegmentResult_ES_Count = self.SegmentResult_ES / 255
         Voxel_ES = SegmentResult_ES_Count.sum()
-        Volume_ES = Voxel_Volume * Voxel_ES
-        print(Volume_ED)
-        print(Volume_ES)
+        Volume_ES = Voxel_Volume * Voxel_ES / (s_ES - count_outlier_ES) * s_ES
+        self.EDVShow.setText(str(Volume_ED))
+        self.ESVShow.setText(str(Volume_ES))
+        # print(Volume_ED)
+        # print(Volume_ES)
         print("Volume Computed!")
 
 
