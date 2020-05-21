@@ -8,12 +8,12 @@ import nibabel as nib
 from PIL import Image
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-import matplotlib.pyplot as plt
-from utils import init_ROI, region_growing, get_convex_hull_centroid, get8n, region_growing_2
-import cv2
-from skimage.morphology import convex_hull_image
-from skimage import feature
-import skimage
+# import matplotlib.pyplot as plt
+# from utils import init_ROI, region_growing, get_convex_hull_centroid, get8n, region_growing_2
+# import cv2
+# from skimage.morphology import convex_hull_image
+# from skimage import feature
+# import skimage
 from segment import segLV
 from utils import *
 
@@ -22,7 +22,7 @@ class MyWindow(QtWidgets.QWidget):
     def __init__(self):
         super(MyWindow, self).__init__()
         self.setObjectName("MainWindow")
-        self.resize(1030, 650)
+        self.resize(1030, 700)
         self.setWindowTitle("Medical Image Analysis Project Demo by Jianning Deng & Yunke Li")
         font_1 = QtGui.QFont()
         font_1.setFamily("Arial")
@@ -31,6 +31,11 @@ class MyWindow(QtWidgets.QWidget):
         font_2 = QtGui.QFont()
         font_2.setFamily("Microsoft YaHei")
         font_2.setPointSize(22)
+
+        self.ResultDisplay = QtWidgets.QLabel(self)
+        self.ResultDisplay.setText("Welcome!")
+        self.ResultDisplay.setFont(font_1)
+        self.ResultDisplay.move(70, 620)
 
         self.Title = QtWidgets.QLabel(self)
         self.Title.setText("MIA DEMO")
@@ -151,7 +156,7 @@ class MyWindow(QtWidgets.QWidget):
         self.EDMap.move(350, 350)
         self.EDMap.setObjectName("EDShowMap")
         self.EDMap.setScaledContents(True)
-        self.EDMap.setPixmap(QtGui.QPixmap('../image.png'))
+        self.EDMap.setPixmap(QtGui.QPixmap('../ED.png'))
 
         self.ESSliceLabel = QtWidgets.QLabel(self)
         self.ESSliceLabel.setText("Slice: ")
@@ -178,7 +183,7 @@ class MyWindow(QtWidgets.QWidget):
         self.ESMap.move(700, 350)
         self.ESMap.setObjectName("ESShowMap")
         self.ESMap.setScaledContents(True)
-        self.ESMap.setPixmap(QtGui.QPixmap('../image.png'))
+        self.ESMap.setPixmap(QtGui.QPixmap('../ES.png'))
 
         self.SegButton = QtWidgets.QPushButton(self)
         self.SegButton.setObjectName("Segment")
@@ -242,6 +247,8 @@ class MyWindow(QtWidgets.QWidget):
         self.qPix_ES = None
         self.SegmentResult_ED = None
         self.SegmentResult_ES = None
+        self.maxslice = None
+        self.maxframe = None
 
     def LoadFile(self):
         filename, _ = QFileDialog.getOpenFileName(self, "Open Nifti File", "./", "All Files (*);;NIFTI (*.gz)")
@@ -249,6 +256,10 @@ class MyWindow(QtWidgets.QWidget):
         self.rawdata = nib.load(self.filename)
         self.img_data = self.rawdata.get_fdata()
         self.info = self.rawdata.header
+        self.maxslice = self.img_data.shape[2]
+        self.maxframe = self.img_data.shape[3]
+        self.SliceSlider.setMaximum(self.maxslice - 1)
+        self.FrameSlider.setMaximum(self.maxframe - 1)
         filepath = os.path.split(filename)[0]
         self.filepath = filepath
         cfg_path = filepath + "/Info.cfg"
@@ -259,7 +270,10 @@ class MyWindow(QtWidgets.QWidget):
                 self.EDIndex = int(lines.replace('ED: ', '')) - 1
             if "ES" in lines:
                 self.ESIndex = int(lines.replace('ES: ', '')) - 1
+        self.ResultDisplay.setText("Load Successfully!")
+        self.ResultDisplay.adjustSize()
         print("Load Successfully!")
+
 
     def LoadEDGT(self):
         filename, _ = QFileDialog.getOpenFileName(self, "Open EDGT File", "./", "All Files (*);;NIFTI (*.gz)")
@@ -339,18 +353,35 @@ class MyWindow(QtWidgets.QWidget):
         [r, c, sl, _] = img_data.shape
         segment_ED = np.zeros([r, c, sl])
         segment_ES = np.zeros([r, c, sl])
+        self.EDSliceSlider.setMaximum(sl - 1)
+        self.ESSliceSlider.setMaximum(sl - 1)
+        ED_outlier = ""
+        ES_outlier = ""
+        ED_outlier_display = ""
+        ES_outlier_display = ""
         for s_ED in range(sl):
             img_ED = img_data[:, :, s_ED, self.EDIndex]
             chull, _, _, _, _, _, _, _ = segLV(img_ED, xRadius)
             segment_ED[:, :, s_ED] = chull
+            if chull is None:
+                segment_ED[:, :, s_ED] = np.zeros([r, c])
+                ED_outlier = ED_outlier + str(s_ED) + " "
         for s_ES in range(sl):
             img_ES = img_data[:, :, s_ES, self.ESIndex]
             chull, _, _, _, _, _, _, _ = segLV(img_ES, xRadius)
             segment_ES[:, :, s_ES] = chull
-
+            if chull is None:
+                segment_ES[:, :, s_ES] = np.zeros([r, c])
+                ES_outlier = ES_outlier + str(s_ES) + " "
         self.SegmentResult_ED = segment_ED * 255
         self.SegmentResult_ES = segment_ES * 255
         print("Segment Done!")
+        if ED_outlier != "":
+            ED_outlier_display = "ED: Slice No." + ED_outlier + "Failed"
+        if ES_outlier != "":
+            ES_outlier_display = "ES: Slice No." + ES_outlier + "Failed"
+        self.ResultDisplay.setText("Segment Done!  " + ED_outlier_display + "  " + ES_outlier_display)
+        self.ResultDisplay.adjustSize()
 
     def ComputeV(self):
         if self.SegmentResult_ED is None:

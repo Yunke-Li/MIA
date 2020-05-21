@@ -58,6 +58,9 @@ def segLV(imgRaw, width):
     # plt.show()
 
     cx, cy = get_convex_hull_centroid(scan_map)
+    if cx is None:
+        print('failure in finding the initial ROI')
+        return None, None, None, None, None, None, None, None
     cx = int(cx)
     cy = int(cy)
 
@@ -93,7 +96,13 @@ def segLV(imgRaw, width):
     # plt.imshow(rawEdge)
     # plt.show()
     TD, BU = edgeCandidate(rawEdge)
+    if TD is None:
+        print('failed to find the canny edge')
+        return None, None, None, None, None, None, None, None
     edgeX, edgeY, cEdge = getEdgeCoordinate(TD, BU, width)
+    if edgeX is None:
+        print('failed to find the canny edge')
+        return None, None, None, None, None, None, None, None
     edgeX = np.concatenate((edgeX, edgeX[0:1]))
     edgeY = np.concatenate((edgeY, edgeY[0:1]))
     edgeX, edgeY = expension(edgeX, edgeY, pixNum=2)
@@ -108,6 +117,10 @@ def segLV(imgRaw, width):
     yPos = 0
     while regionBloodPloar[0, yPos] != 1:
         yPos = yPos + 1
+        if yPos >= regionBloodPloar.shape[0]:
+            print('failed to initial the ROI')
+            return None, None, None, None, None, None, None, None
+
     seed = [0, yPos]
     polarGrowing = region_growing(regionBloodPloar, regionBloodPloar, [0, 0], seed=seed, threshold=1)
     # plt.imshow(polarGrowing)
@@ -300,8 +313,22 @@ def segLV(imgRaw, width):
     OP = np.zeros_like(imgRaw)
     OP[cx - width:cx + width + 1, cy - width:cy + width + 1] = cannyMask
 
+    xTemp, yTemp = np.where(OP == 1)
+    newP = clockwise(xTemp, yTemp)
+    hullP = newP.T
+    try:
+        hull = ConvexHull(hullP)
+    except:
+        print('failed to proceed the region growing')
+        return None, None, None, None, None, None, None, None
+    xTemp, yTemp = getConvexPoint(hull, hullP)
+    xTemp = np.concatenate((xTemp, xTemp[0:1]))
+    yTemp = np.concatenate((yTemp, yTemp[0:1]))
+    x = np.concatenate((x, x[0:1]))
+    y = np.concatenate((y, y[0:1]))
+
     # recover the whole image and change the coordinate to global coordinate
-    return OP, x + cx, y + cy, sx + cx, sy + cy, roi, cx, cy
+    return OP, xTemp, yTemp, x, y, roi, cx, cy
 
 
 def segLV3DEval(rawdata, rawgt, verbose=True, saveImg=False):
@@ -324,33 +351,32 @@ def segLV3DEval(rawdata, rawgt, verbose=True, saveImg=False):
     for s in range(sliceNum):
         tempGt = gt[:, :, s]
         tempRaw = img[:, :, s]
-
         # gt preprocessing
         tempGt[tempGt != 3] = 0
 
         tempGt[tempGt == 3] = 1
-        chull, x, y, sx, sy, roi, cx, cy = segLV(tempRaw, xRadius)
-        if cx == None:
+        OP, xTemp, yTemp, x, y, roi, cx, cy = segLV(tempRaw, xRadius)
+        if OP is None:
             continue
-        diff = (chull - tempGt)
+        diff = (OP - tempGt)
         if verbose:
             plt.subplot(1, 2, 1)
 
             plt.imshow(roi, cmap='gray')
-            plt.plot(sx - cx, sy - cy, '-o')
+            plt.plot(x, y, 'r-')
 
             plt.subplot(1, 2, 2)
             plt.imshow(diff)
-        diceError[s] = findDiceError(chull, tempGt)
+        diceError[s] = findDiceError(OP, tempGt)
         d, _ = np.where(diff != 0)
         diceDiff[s] = len(d)
-        estArea[s] = np.count_nonzero(chull)
+        estArea[s] = np.count_nonzero(OP)
         plt.show()
 
         continue
     if verbose:
         plt.bar(range(len(diceDiff)), diceError)
-        plt.show()
+        # plt.show()
     # print('total diff error for segmentation is: ', str(total))
     avgDice = np.sum(diceError) / np.count_nonzero(diceError)
     print('average diceError is: ', str(avgDice))
@@ -359,3 +385,4 @@ def segLV3DEval(rawdata, rawgt, verbose=True, saveImg=False):
     # what should be output?
     # a sequence of area, a sequence of diceError
     # how to estimate the volume?
+    return avgDice, diceError
